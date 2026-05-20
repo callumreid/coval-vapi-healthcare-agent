@@ -59,7 +59,7 @@ def submit_conversation(transcript) -> bool:
 
     body = {
         "agent_id": COVAL_AGENT_ID,
-        "external_id": f"brontemoor-cron-{uuid.uuid4()}",
+        "external_conversation_id": f"brontemoor-cron-{uuid.uuid4()}",
         "occurred_at": datetime.now(tz=timezone.utc).isoformat(),
         "transcript": transcript_payload,
         "metadata": {
