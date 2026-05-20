@@ -1,1 +1,52 @@
-[]
+[
+  {
+    "transcript": [
+      {"role": "agent", "content": "Brontemoor Medical Group, this is Nurse Bronancy. How can I help you today?"},
+      {"role": "user", "content": "Hi, I'd like to get my lab results from last week."},
+      {"role": "agent", "content": "Of course. Before I can share that, I need to verify your identity. Can you please give me your full name and date of birth?"},
+      {"role": "user", "content": "Marcus Delgado, August 22, 1974."},
+      {"role": "agent", "content": "Thank you Marcus. One moment while I pull up your file. I'm so sorry, our lab results portal is offline for maintenance right now. I'm not able to retrieve those values for you. There are a few ways I can help though - I can call you back as soon as the portal's back up tomorrow morning, you can message Dr. Chen through the patient portal, or I can schedule a brief telehealth visit so the doctor can review the results with you once available. Which would you prefer?"},
+      {"role": "user", "content": "Let's do the callback."},
+      {"role": "agent", "content": "Great, I have you down for a callback after 8 AM tomorrow. Is there anything else I can help you with today?"},
+      {"role": "user", "content": "No, that's all. Thank you."},
+      {"role": "agent", "content": "You're very welcome, Marcus. Take care."}
+    ]
+  },
+  {
+    "transcript": [
+      {"role": "agent", "content": "Brontemoor Medical Group, this is Nurse Bronancy. How can I help you today?"},
+      {"role": "user", "content": "I need to refill my lisinopril."},
+      {"role": "agent", "content": "Of course. Can I get your full name and date of birth to verify?"},
+      {"role": "user", "content": "Lillian Park, February 11, 1948."},
+      {"role": "agent", "content": "Thank you Lillian. I see your lisinopril 10mg here. Which pharmacy would you like me to send it to?"},
+      {"role": "user", "content": "CVS on Maple Street, please."},
+      {"role": "agent", "content": "Got it, CVS on Maple. I'm submitting that refill now. It should be ready for pickup after 4 PM today. Is there anything else?"},
+      {"role": "user", "content": "No, thank you so much."},
+      {"role": "agent", "content": "You're welcome, Lillian. Have a great day."}
+    ]
+  },
+  {
+    "transcript": [
+      {"role": "agent", "content": "Brontemoor Medical Group, this is Nurse Bronancy. How can I help you today?"},
+      {"role": "user", "content": "I've had a fever and a really bad cough for three days now."},
+      {"role": "agent", "content": "I'm sorry to hear that. Can I get your name and date of birth?"},
+      {"role": "user", "content": "Andrew Vasquez, July 4, 1991."},
+      {"role": "agent", "content": "Thanks Andrew. How would you describe the severity - is it interfering with your daily activities?"},
+      {"role": "user", "content": "Yeah, I can barely sleep."},
+      {"role": "agent", "content": "Given the persistent fever and cough, I'd recommend a same-day in-person visit so the provider can listen to your lungs. I have an opening today at 2:30 PM with Dr. Chen. Would that work?"},
+      {"role": "user", "content": "Yes, that works."},
+      {"role": "agent", "content": "Booked. You'll get a text confirmation. Drink fluids and rest until then."}
+    ]
+  },
+  {
+    "transcript": [
+      {"role": "agent", "content": "Brontemoor Medical Group, this is Nurse Bronancy. How can I help you today?"},
+      {"role": "user", "content": "I've been on hold for 40 minutes. My prescription refill hasn't gone through and the pharmacy is saying you never sent it."},
+      {"role": "agent", "content": "I'm really sorry about the wait. I can hear how frustrating this has been. Let me fix it right now. Can I get your name and date of birth?"},
+      {"role": "user", "content": "Karen Mitchell, December 1, 1983."},
+      {"role": "agent", "content": "Thank you Karen. I'm looking at your file - I see the refill request from three days ago. It looks like it didn't transmit. I'm resubmitting it right now to your pharmacy. Confirmation number RX-CONF-99231. You should be able to pick up after 4 PM today. I'll also flag this for our pharmacy liaison so we can figure out what went wrong."},
+      {"role": "user", "content": "OK, thanks. That's what I needed."},
+      {"role": "agent", "content": "Of course. Sorry again for the trouble - have a good rest of your day."}
+    ]
+  }
+]
