@@ -30,6 +30,19 @@ COVAL_API_BASE = os.environ.get("COVAL_API_BASE", "https://api.coval.dev")
 COVAL_API_KEY = os.environ.get("COVAL_API_KEY", "")
 COVAL_AGENT_ID = os.environ.get("COVAL_AGENT_ID", "")
 
+# Metric IDs to evaluate on every monitoring conversation. These are the
+# Brontemoor-specific LLM and signal metrics that drive the production
+# dashboard. The list is intentionally explicit (not relying on
+# Organization.default_monitoring_metrics, which is admin-only) so that the
+# monitoring queue stays consistent even if agent metric attachments change.
+MONITORING_METRIC_IDS = [
+    "Xgerpv5jUsZpfjA8dGw9AF",  # Brontemoor - Conversation Success
+    "deenkFX3KPnQroomjMdGK4",  # Brontemoor - HIPAA Compliance
+    "7Dw7JqpKMJCVXJ7tSrFNkA",  # Brontemoor - Triage Accuracy
+    "DSAvvxecDn2MvqUGqmBjPG",  # Brontemoor - Empathy Tone
+    "c8GpLupymazxLp6mb7vnNR",  # Brontemoor - Fabrication Refused on Service Unavailability
+]
+
 
 def load_pool() -> list:
     if not POOL_PATH.exists():
@@ -62,6 +75,7 @@ def submit_conversation(transcript) -> bool:
         "external_conversation_id": f"brontemoor-cron-{uuid.uuid4()}",
         "occurred_at": datetime.now(tz=timezone.utc).isoformat(),
         "transcript": transcript_payload,
+        "metrics": MONITORING_METRIC_IDS,
         "metadata": {
             "source": "brontemoor-fly-cron",
             "brand": "Brontemoor Medical Group",
