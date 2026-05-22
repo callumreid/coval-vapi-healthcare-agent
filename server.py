@@ -19,9 +19,12 @@ Deploy to Fly.io
 import json
 import logging
 import os
+import time
 
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+
+import coval_tracing
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,6 +33,34 @@ app = FastAPI(title="Brontemoor Medical - Nurse Bronancy (Vapi)")
 
 # Config
 NURSE_BRONANCY_ASSISTANT_ID = os.environ.get("VAPI_ASSISTANT_ID", "")
+_CALL_SIMULATION_HINTS: dict[str, str] = {}
+
+
+def _extract_call_id(body: dict, message: dict) -> str:
+    call = message.get("call") if isinstance(message.get("call"), dict) else {}
+    body_call = body.get("call") if isinstance(body.get("call"), dict) else {}
+    return (
+        call.get("id")
+        or message.get("callId")
+        or message.get("call_id")
+        or body_call.get("id")
+        or body.get("callId")
+        or ""
+    )
+
+
+def _extract_vapi_simulation_id(message: dict, body: dict) -> str:
+    candidates = [
+        message.get("assistantOverrides", {}).get("variableValues", {}).get("coval-simulation-id"),
+        message.get("assistantOverrides", {}).get("variableValues", {}).get("simulation_id"),
+        body.get("assistantOverrides", {}).get("variableValues", {}).get("coval-simulation-id"),
+        body.get("simulation_output_id"),
+        message.get("simulation_output_id"),
+    ]
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 # Mock tool handlers
@@ -171,25 +202,54 @@ def _triage_symptoms(args: dict) -> str:
 
 # Webhook endpoint
 
+@app.post("/register-simulation")
+async def register_simulation(request: Request):
+    headers = {key.lower(): value for key, value in request.headers.items()}
+    if not coval_tracing.registration_authorized(headers):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    body = await request.json()
+    simulation_id = body.get("simulation_output_id") or body.get("simulation_id")
+    run_id = body.get("run_id")
+    try:
+        result = coval_tracing.register_simulation(simulation_id, run_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(result)
+
+
 @app.post("/webhook")
-async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
+async def vapi_webhook(request: Request):
+    request_start = time.perf_counter()
     body = await request.json()
     message = body.get("message", {})
     msg_type = message.get("type", "")
-    call = message.get("call", {})
-    call_id = call.get("id", "")
+    call = message.get("call", {}) if isinstance(message.get("call"), dict) else {}
+    call_id = _extract_call_id(body, message)
+    simulation_id_hint = _extract_vapi_simulation_id(message, body)
+    if simulation_id_hint and _CALL_SIMULATION_HINTS.get(call_id) != simulation_id_hint:
+        _CALL_SIMULATION_HINTS[call_id] = simulation_id_hint
+        try:
+            coval_tracing.register_simulation(simulation_id_hint)
+            logger.info("  simulation id hint registered from webhook payload")
+        except ValueError:
+            logger.warning("  simulation id hint was invalid")
 
     logger.info(f"Vapi webhook: type={msg_type} call={call_id}")
+    coval_tracing.record_vapi_event(call_id, msg_type)
 
-    # assistant-request
     if msg_type == "assistant-request":
+        coval_tracing.record_assistant_request(
+            call_id,
+            message,
+            (time.perf_counter() - request_start) * 1000,
+        )
         return JSONResponse({"assistantId": NURSE_BRONANCY_ASSISTANT_ID})
 
-    # tool-calls
-    elif msg_type == "tool-calls":
+    if msg_type == "tool-calls":
         results = []
         tool_list = message.get("toolCallList", [])
-        logger.info(f"  tool-calls payload keys: {list(message.keys())} toolCallList count: {len(tool_list)}")
+        logger.info(f"  tool-calls count: {len(tool_list)}")
         for tc in tool_list:
             fn = tc.get("function", {})
             name = fn.get("name", "")
@@ -200,25 +260,48 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
                 args = {}
 
             handler = _MOCK_TOOLS.get(name)
+            start = time.perf_counter()
             if handler:
                 result = handler(args)
                 logger.info(f"  Tool call: {name} succeeded={_tool_succeeded(result)}")
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
                 logger.warning(f"  Unknown tool: {name}")
+            latency_ms = (time.perf_counter() - start) * 1000
 
+            coval_tracing.record_tool_call(
+                call_id=call_id,
+                tool_call_id=tc.get("id", ""),
+                name=name or "unknown",
+                args=args,
+                result=result,
+                latency_ms=latency_ms,
+            )
             results.append({"toolCallId": tc.get("id", ""), "result": result})
 
+        coval_tracing.record_webhook(
+            call_id=call_id,
+            msg_type="tool-calls",
+            message=message,
+            latency_ms=(time.perf_counter() - request_start) * 1000,
+            attributes={"tool.call.batch_size": len(tool_list)},
+        )
         return JSONResponse({"results": results})
 
-    # end-of-call-report
-    elif msg_type == "end-of-call-report":
-        logger.info(f"  Call ended: call={call_id} reason={call.get('endedReason', '')}")
+    if msg_type == "end-of-call-report":
+        ended_reason = message.get("endedReason") or call.get("endedReason", "")
+        logger.info(f"  Call ended: call={call_id} reason={ended_reason}")
+        export_result = coval_tracing.finish_call(
+            call_id,
+            message,
+            (time.perf_counter() - request_start) * 1000,
+        )
+        logger.info(f"  Coval trace export result: {export_result}")
+        _CALL_SIMULATION_HINTS.pop(call_id, None)
 
-    # all other events
     return JSONResponse({})
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "agent": "nurse-bronancy", "brand": "Brontemoor Medical Group"}
+    return {"status": "ok", "tracing": coval_tracing.debug_status()}

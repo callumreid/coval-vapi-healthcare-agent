@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY server.py monitoring_cron.py ./
+COPY server.py monitoring_cron.py coval_tracing.py ./
 COPY pool ./pool
 
 EXPOSE 8000
